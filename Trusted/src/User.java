@@ -4,10 +4,14 @@ import java.security.NoSuchAlgorithmException;
 public class User {
     String username;
     String hashedPassword;
+    Type type;
+    final public byte[] Kut = "tn3oa9ht01dit5hgopre93dc".getBytes();
+    final public byte[] Kst = "p94hnvg8ufh3dsipr4thd4cb".getBytes();
 
-    User(String username, String password){
+    User(String username, String password, Type type){
         this.username = username;
         hashedPassword = generateHash(password);
+        this.type = type;
     }
 
     public String getUsername(){
@@ -18,6 +22,10 @@ public class User {
         return hashedPassword;
     }
 
+    public Type getType(){
+        return type;
+    }
+
     public String generateHash(String password){
         String hash = null;
         MessageDigest md;
@@ -26,7 +34,7 @@ public class User {
             md.update(password.getBytes(), 0, password.length());
             StringBuffer hexString = new StringBuffer();
             byte[] mdbytes = md.digest();
-            for (int i=0; i<mdbytes.length; i++) {
+            for (int i=0;i<mdbytes.length;i++) {
                 hexString.append(Integer.toHexString(0xFF & mdbytes[i]));
             }
 
