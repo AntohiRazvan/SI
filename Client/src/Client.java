@@ -9,6 +9,7 @@ public class Client {
     static PrintWriter out;
     static Random rand = new Random();
 
+    static byte[] Kut = "Lk89njhH89aI".getBytes();
     static String nonce;
 
     public static void main(String args[]) {
@@ -16,7 +17,9 @@ public class Client {
             initNet();
             User u = new User("Razvan", "abcd");
 
-            out.println(u.username + " " + u.hashedPassword);
+            byte b[] = new byte[] {0x21, 0x34};
+            out.println(b);
+            out.println(u.getUsername() + " " + u.getHashedPassword());
 
             while (!in.ready()) {}
             System.out.println(in.readLine());
@@ -51,6 +54,6 @@ public class Client {
 
     static void requestService(User user, String service){
         nonce = "" + rand.nextInt((999999 - 100000) + 1) + 100000;
-        out.println(user + " " + service + " " + nonce);
+        out.println(user + "," + service + "," + nonce);
     }
 }
