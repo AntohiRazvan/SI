@@ -1,0 +1,4 @@
+users.csv,SECRET
+resources.csv,SECRET
+file1.txt,RESTRICTED
+file2.txt,CONFIDENTIAL
