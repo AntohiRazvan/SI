@@ -1,0 +1,10 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="Service:jar">
+    <output-path>$PROJECT_DIR$/../</output-path>
+    <root id="archive" name="Service.jar">
+      <element id="module-output" name="Service" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../../../commons-codec-1.10-tests.jar" path-in-jar="/" />
+      <element id="extracted-dir" path="$PROJECT_DIR$/../../../commons-codec-1.10.jar" path-in-jar="/" />
+    </root>
+  </artifact>
+</component>

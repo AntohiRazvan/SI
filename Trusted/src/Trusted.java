@@ -1,3 +1,7 @@
+import io.netty.handler.codec.base64.Base64Encoder;
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
+
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
@@ -6,11 +10,11 @@ import java.lang.*;
 import java.io.*;
 import java.net.*;
 import java.security.Key;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import org.apache.commons.codec.binary.Base64;
 
 public class Trusted {
     static ServerSocket server;
@@ -20,65 +24,54 @@ public class Trusted {
 
     static final double timeToLive = 7200000; //2 hours
 
-    static byte[] Kut = "Lk89njhH89aI".getBytes();
-    static byte[] Kst = "NjJ989KJkla0".getBytes();
+    static byte[] Kut = "Lk89njhH89aIr7uc".getBytes();
+    static byte[] Kst = "NjJ989KJkla0poU3".getBytes();
     static List<User> users = new ArrayList<User>();
     static HashMap<String, Classification> resources = new HashMap<String, Classification>();
 
     static List<List<List<Permission>>> hasPermission = Arrays.asList(
-                                                        Arrays.asList(
-                                                            Arrays.asList(Permission.READ, Permission.WRITE),
-                                                            Arrays.asList(Permission.NONE),
-                                                            Arrays.asList(Permission.NONE)
-                                                        ),
-                                                        Arrays.asList(
-                                                                Arrays.asList(Permission.READ),
+                                                            Arrays.asList(
                                                                 Arrays.asList(Permission.READ, Permission.WRITE),
+                                                                Arrays.asList(Permission.NONE),
                                                                 Arrays.asList(Permission.NONE)
-                                                        ),
-                                                        Arrays.asList(
-                                                                Arrays.asList(Permission.READ),
-                                                                Arrays.asList(Permission.READ),
-                                                                Arrays.asList(Permission.READ, Permission.WRITE)
-                                                        )
-                                                       );
+                                                            ),
+                                                            Arrays.asList(
+                                                                    Arrays.asList(Permission.READ),
+                                                                    Arrays.asList(Permission.READ, Permission.WRITE),
+                                                                    Arrays.asList(Permission.NONE)
+                                                            ),
+                                                            Arrays.asList(
+                                                                    Arrays.asList(Permission.READ),
+                                                                    Arrays.asList(Permission.READ),
+                                                                    Arrays.asList(Permission.READ, Permission.WRITE)
+                                                            )
+                                                        );
 
     public static void main(String args[]) {
+        initSocket();
         loadUsers();
         loadResources();
-        KeyGenerator keyGen = null;
         try {
-            keyGen = KeyGenerator.getInstance("DESede");
-            keyGen.init(112);
-            SecretKey secretKey = keyGen.generateKey();
-            byte[] encoded = secretKey.getEncoded();
-            for (byte b : encoded)
-            {
-                System.out.printf("%2X ",b);
+            while(true) {
+                waitForClient();
+                serviceRequestResponse();
             }
-            System.out.println("");
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        }
-
-
-        try {
-
-            waitForClient();
-
-
-            while(!in.ready()){}
-            String data =  in.readLine();
-            out.println(data);
         }
         catch(Exception e) {
             System.out.println("[Trusted]Error!\n");
         }
     }
 
+    static void initSocket(){
+        try {
+            server = new ServerSocket(1112);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
     static void waitForClient(){
         try {
-            server = new ServerSocket(1234);
             socket = server.accept();
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             out = new PrintWriter(socket.getOutputStream(), true);
@@ -108,14 +101,27 @@ public class Trusted {
             Permission permission = Permission.getPermission(data[0]);
             String resource = data[1];
             User user = findUser(username);
+        //    List<List<Permission>> l1 = hasPermission.get(user.getType().ordinal());
+       //     Classification c = resources.get(resource);
+         //   List<Permission> l2 = l1.get(c.ordinal());
+
             if( (user != null) && ((hasPermission.get(user.getType().ordinal())).get((resources.get(resource)).ordinal()).contains(permission)) ){
                 StringBuilder response = new StringBuilder();
-                double expirationTime = System.currentTimeMillis() + timeToLive;
-
+                KeyGenerator keyGen = KeyGenerator.getInstance("DESede");
+                keyGen.init(112);
+                SecretKey secretKey = keyGen.generateKey();
+                response.append(Base64.encodeBase64String(secretKey.getEncoded()) + ",");
+                response.append(nonce + ",");
+                response.append(timeToLive + ",");
+                response.append(service);
+                out.println(encryptResponse(response.toString(), Kut));
+                response = new StringBuilder();
+                response.append(Base64.encodeBase64String(secretKey.getEncoded()) + ",");
+                response.append(username + ",");
+                response.append(timeToLive);
+                out.println(encryptResponse(response.toString(), Kst));
             }
-
-
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -123,7 +129,7 @@ public class Trusted {
     static void loadUsers(){
 
         try {
-            BufferedReader reader = new BufferedReader(new FileReader("users.csv"));
+            BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\Razvan\\Desktop\\Facultate\\IS\\users.csv"));
             String line = null;
             while((line = reader.readLine()) != null){
                 String[] data = line.split(",");
@@ -137,7 +143,7 @@ public class Trusted {
 
     static void loadResources(){
         try {
-            BufferedReader reader = new BufferedReader(new FileReader("resources.csv"));
+            BufferedReader reader = new BufferedReader(new FileReader("C:\\Users\\Razvan\\Desktop\\Facultate\\IS\\resources.csv"));
             String line = null;
             while((line = reader.readLine()) != null){
                 String[] data = line.split(",");
@@ -156,16 +162,17 @@ public class Trusted {
         return null;
     }
 
-    static String encryptResponse(String message){
-        String encryption = null;
+    static String encryptResponse(String message, byte[] secretKey){
+        String encryptedText = null;
         try {
-            Key key = new SecretKeySpec(Kut, "AES");
-            Cipher c = Cipher.getInstance("AES");
+            Key key = new SecretKeySpec(secretKey, "AES");
+            Cipher c = Cipher.getInstance("AES/ECB/PKCS5Padding");
             c.init(Cipher.ENCRYPT_MODE, key);
-            encryption = new String(c.doFinal(message.getBytes()), "ISO-8859-1");
+            byte encryption[] = c.doFinal(message.getBytes());
+            encryptedText = Base64.encodeBase64String(encryption);
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return encryption;
+        return encryptedText;
     }
 }
